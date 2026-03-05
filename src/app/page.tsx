@@ -98,10 +98,10 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
       <div className="a4-page">
         {/* === HEADER === */}
         <div className="flex items-center justify-between mb-5 flex-shrink-0">
-          <Logo className="h-7" />
+          <Logo className="h-8" />
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-zinc-400">{today}</span>
-            <span className="text-[11px] font-semibold text-zinc-900 px-2 py-1 bg-zinc-100 rounded">EUROGASTRO 2026</span>
+            <span className="text-[13px] text-zinc-600">{today}</span>
+            <span className="text-[13px] font-bold text-black px-3 py-1 bg-zinc-100 rounded">EUROGASTRO 2026</span>
           </div>
         </div>
 
@@ -111,63 +111,63 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
           {/* Restaurant Name + Score */}
           <div className="flex items-start justify-between mb-6">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-400 font-semibold mb-2">Raport Social Media</p>
-              <h1 className="text-[28px] font-extrabold leading-tight text-[#0a0a0a] mb-1">{data.page.name}</h1>
+              <p className="text-[12px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-2">Raport Social Media</p>
+              <h1 className="text-[28px] font-black leading-tight text-black mb-1">{data.page.name}</h1>
               {data.page.followers > 0 && (
-                <p className="text-[14px] text-zinc-500">{data.page.followers.toLocaleString('pl-PL')} obserwujących na Facebooku</p>
+                <p className="text-[15px] text-zinc-600 font-medium">{data.page.followers.toLocaleString('pl-PL')} obserwujących na Facebooku</p>
               )}
             </div>
             <div className="flex flex-col items-center">
               <div className="relative w-20 h-20">
                 <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="50%" cy="50%" r="42%" stroke="#e5e5e5" strokeWidth="6" fill="none" />
+                  <circle cx="50%" cy="50%" r="42%" stroke="#d4d4d8" strokeWidth="6" fill="none" />
                   <circle cx="50%" cy="50%" r="42%"
-                    stroke={data.score.overall >= 7 ? '#22c55e' : data.score.overall >= 4 ? '#f59e0b' : '#ef4444'}
+                    stroke={data.score.overall >= 7 ? '#16a34a' : data.score.overall >= 4 ? '#d97706' : '#dc2626'}
                     strokeWidth="6" fill="none" strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 34}
                     strokeDashoffset={2 * Math.PI * 34 - (data.score.overall / 10) * 2 * Math.PI * 34}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[24px] font-bold leading-none">{data.score.overall}</span>
-                  <span className="text-[10px] text-zinc-400">/10</span>
+                  <span className="text-[26px] font-black leading-none text-black">{data.score.overall}</span>
+                  <span className="text-[11px] text-zinc-600 font-semibold">/10</span>
                 </div>
               </div>
-              <p className="text-[10px] font-semibold text-zinc-500 mt-1">OCENA</p>
+              <p className="text-[11px] font-bold text-zinc-600 mt-1">OCENA</p>
             </div>
           </div>
 
           {/* Score Cards */}
           <div className="grid grid-cols-4 gap-2.5 mb-5">
-            <div className="rounded-xl bg-zinc-50 p-3">
+            <div className="rounded-xl bg-zinc-100 p-3 border border-zinc-200">
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Aktywność</p>
-                <p className="text-[20px] font-bold text-zinc-900">{data.score.activity}<span className="text-[11px] text-zinc-400">/10</span></p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-700 font-bold">Aktywność</p>
+                <p className="text-[22px] font-black text-black">{data.score.activity}<span className="text-[12px] text-zinc-600 font-bold">/10</span></p>
               </div>
-              <p className="text-[10px] text-zinc-500 leading-snug">Regularność publikacji</p>
+              <p className="text-[11px] text-zinc-700 leading-snug font-medium">Regularność publikacji</p>
             </div>
-            <div className="rounded-xl bg-zinc-50 p-3">
+            <div className="rounded-xl bg-zinc-100 p-3 border border-zinc-200">
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Engagement</p>
-                <p className="text-[20px] font-bold text-zinc-900">{data.score.engagement}<span className="text-[11px] text-zinc-400">/10</span></p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-700 font-bold">Engagement</p>
+                <p className="text-[22px] font-black text-black">{data.score.engagement}<span className="text-[12px] text-zinc-600 font-bold">/10</span></p>
               </div>
-              <p className="text-[10px] text-zinc-500 leading-snug">
+              <p className="text-[11px] text-zinc-700 leading-snug font-medium">
                 {data.engagement.engagementRate !== null ? `${data.engagement.engagementRate}% eng. rate` : 'Zaangażowanie'}
               </p>
             </div>
-            <div className="rounded-xl bg-zinc-50 p-3">
+            <div className="rounded-xl bg-zinc-100 p-3 border border-zinc-200">
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Reklamy</p>
-                <p className="text-[20px] font-bold text-zinc-900">{data.score.ads}<span className="text-[11px] text-zinc-400">/10</span></p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-700 font-bold">Reklamy</p>
+                <p className="text-[22px] font-black text-black">{data.score.ads}<span className="text-[12px] text-zinc-600 font-bold">/10</span></p>
               </div>
-              <p className="text-[10px] text-zinc-500 leading-snug">Kampanie Meta Ads</p>
+              <p className="text-[11px] text-zinc-700 leading-snug font-medium">Kampanie Meta Ads</p>
             </div>
-            <div className={`rounded-xl p-3 ${data.ads.hasActiveAds ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className={`rounded-xl p-3 border-2 ${data.ads.hasActiveAds ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'}`}>
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Aktywne</p>
-                <p className={`text-[20px] font-bold ${data.ads.hasActiveAds ? 'text-green-600' : 'text-red-600'}`}>{data.ads.adsCount}</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-700 font-bold">Aktywne</p>
+                <p className={`text-[22px] font-black ${data.ads.hasActiveAds ? 'text-green-700' : 'text-red-700'}`}>{data.ads.adsCount}</p>
               </div>
-              <p className="text-[10px] text-zinc-500 leading-snug">{data.ads.hasActiveAds ? 'Reklamy znalezione' : 'Brak widoczności'}</p>
+              <p className="text-[11px] text-zinc-700 leading-snug font-medium">{data.ads.hasActiveAds ? 'Reklamy znalezione' : 'Brak widoczności'}</p>
             </div>
           </div>
 
@@ -175,54 +175,54 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
           <div className="grid grid-cols-2 gap-5 mb-5">
             {/* Activity */}
             <div>
-              <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-3">Profil Facebook</p>
+              <p className="text-[12px] uppercase tracking-[0.15em] text-zinc-700 font-bold mb-3">Profil Facebook</p>
               <div className="space-y-2">
-                <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
-                  <span className="text-[12px] text-zinc-500">Obserwujących</span>
-                  <span className="text-[12px] font-semibold text-zinc-800">{data.page.followers > 0 ? data.page.followers.toLocaleString('pl-PL') : 'Brak danych'}</span>
+                <div className="flex justify-between items-center py-2 border-b border-zinc-300">
+                  <span className="text-[13px] text-zinc-700 font-medium">Obserwujących</span>
+                  <span className="text-[13px] font-bold text-black">{data.page.followers > 0 ? data.page.followers.toLocaleString('pl-PL') : 'Brak danych'}</span>
                 </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
-                  <span className="text-[12px] text-zinc-500">Engagement rate</span>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${data.score.engagement >= 6 ? 'bg-green-100 text-green-700' : data.score.engagement >= 4 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                <div className="flex justify-between items-center py-2 border-b border-zinc-300">
+                  <span className="text-[13px] text-zinc-700 font-medium">Engagement rate</span>
+                  <span className={`text-[12px] font-bold px-2 py-1 rounded ${data.score.engagement >= 6 ? 'bg-green-200 text-green-800' : data.score.engagement >= 4 ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800'}`}>
                     {data.engagement.engagementRate !== null ? `${data.engagement.engagementRate}%` : 'Brak danych'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
-                  <span className="text-[12px] text-zinc-500">Regularność postów</span>
-                  <span className="text-[12px] font-semibold text-zinc-800">
+                <div className="flex justify-between items-center py-2 border-b border-zinc-300">
+                  <span className="text-[13px] text-zinc-700 font-medium">Regularność postów</span>
+                  <span className="text-[13px] font-bold text-black">
                     {data.activity.postsPerWeek >= 7 ? 'Codziennie' : data.activity.postsPerWeek >= 3 ? 'Kilka razy/tyg.' : data.activity.postsPerWeek >= 1 ? 'Raz/tydzień' : 'Nieregularnie'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
-                  <span className="text-[12px] text-zinc-500">Status aktywności</span>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${data.score.activity >= 6 ? 'bg-green-100 text-green-700' : data.score.activity >= 4 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                <div className="flex justify-between items-center py-2 border-b border-zinc-300">
+                  <span className="text-[13px] text-zinc-700 font-medium">Status aktywności</span>
+                  <span className={`text-[12px] font-bold px-2 py-1 rounded ${data.score.activity >= 6 ? 'bg-green-200 text-green-800' : data.score.activity >= 4 ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800'}`}>
                     {data.score.activity >= 6 ? 'Aktywny' : data.score.activity >= 4 ? 'Średnio aktywny' : 'Mało aktywny'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-1.5">
-                  <span className="text-[12px] text-zinc-500">Potencjał wzrostu</span>
-                  <span className="text-[12px] font-semibold text-zinc-800">{data.page.followers < 1000 ? 'Wysoki' : data.page.followers < 5000 ? 'Średni' : 'Do utrzymania'}</span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-[13px] text-zinc-700 font-medium">Potencjał wzrostu</span>
+                  <span className="text-[13px] font-bold text-black">{data.page.followers < 1000 ? 'Wysoki' : data.page.followers < 5000 ? 'Średni' : 'Do utrzymania'}</span>
                 </div>
               </div>
             </div>
 
             {/* Ads */}
             <div>
-              <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-3">Reklamy Meta Ads</p>
-              <div className={`rounded-xl p-4 mb-3 ${data.ads.hasActiveAds ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <p className="text-[12px] uppercase tracking-[0.15em] text-zinc-700 font-bold mb-3">Reklamy Meta Ads</p>
+              <div className={`rounded-xl p-4 mb-3 border-2 ${data.ads.hasActiveAds ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'}`}>
                 <div className="flex items-center gap-3">
-                  <span className="text-[24px]">{data.ads.hasActiveAds ? '✅' : '❌'}</span>
+                  <span className="text-[26px]">{data.ads.hasActiveAds ? '✓' : '✗'}</span>
                   <div>
-                    <p className={`text-[14px] font-bold ${data.ads.hasActiveAds ? 'text-green-700' : 'text-red-700'}`}>
+                    <p className={`text-[15px] font-black ${data.ads.hasActiveAds ? 'text-green-800' : 'text-red-800'}`}>
                       {data.ads.hasActiveAds ? `${data.ads.adsCount} aktywnych reklam` : 'Brak aktywnych reklam'}
                     </p>
-                    <p className="text-[11px] text-zinc-600">
+                    <p className="text-[12px] text-zinc-700 font-medium">
                       {data.ads.hasActiveAds ? 'Restauracja inwestuje w widoczność' : 'Konkurencja z reklamami przejmuje klientów'}
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-500 leading-snug">
+              <p className="text-[12px] text-zinc-700 leading-snug font-medium">
                 {data.ads.hasActiveAds 
                   ? 'Prowadzenie reklam to dobry znak — warto sprawdzić czy są dobrze zoptymalizowane i czy ROI jest zadowalające.'
                   : 'Bez płatnych reklam restauracja jest niewidoczna dla osób szukających miejsca do jedzenia w okolicy.'}
@@ -233,12 +233,12 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
           {/* Problems */}
           {data.problems.length > 0 && (
             <div className="mb-4">
-              <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-2">⚠️ Problemy</p>
+              <p className="text-[12px] uppercase tracking-[0.15em] text-zinc-700 font-bold mb-2">PROBLEMY</p>
               <div className="space-y-1.5">
                 {data.problems.slice(0, 4).map((problem, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2.5 bg-red-50 rounded-lg border-l-3 border-red-400">
-                    <span className="text-[11px] font-bold text-red-500 flex-shrink-0">{i + 1}.</span>
-                    <p className="text-[12px] text-zinc-700 leading-snug">{problem}</p>
+                  <div key={i} className="flex items-start gap-2 p-2.5 bg-red-100 rounded-lg border-l-4 border-red-500">
+                    <span className="text-[13px] font-black text-red-700 flex-shrink-0">{i + 1}.</span>
+                    <p className="text-[13px] text-zinc-800 leading-snug font-medium">{problem}</p>
                   </div>
                 ))}
               </div>
@@ -247,12 +247,12 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
 
           {/* Recommendations */}
           <div className="mb-4">
-            <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-2">💡 Rekomendacje</p>
+            <p className="text-[12px] uppercase tracking-[0.15em] text-zinc-700 font-bold mb-2">REKOMENDACJE</p>
             <div className="space-y-1.5">
               {data.recommendations.slice(0, 4).map((rec, i) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 bg-green-50 rounded-lg border-l-3 border-green-400">
-                  <span className="text-green-600 text-[11px] flex-shrink-0">→</span>
-                  <p className="text-[12px] text-zinc-700 leading-snug">{rec}</p>
+                <div key={i} className="flex items-start gap-2 p-2.5 bg-green-100 rounded-lg border-l-4 border-green-500">
+                  <span className="text-green-700 text-[13px] font-black flex-shrink-0">→</span>
+                  <p className="text-[13px] text-zinc-800 leading-snug font-medium">{rec}</p>
                 </div>
               ))}
             </div>
@@ -260,22 +260,22 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
         </div>
 
         {/* === CTA FOOTER === */}
-        <div className="rounded-xl bg-[#0a0a0a] text-white p-5 flex items-center justify-between flex-shrink-0 mt-auto">
+        <div className="rounded-xl bg-black text-white p-5 flex items-center justify-between flex-shrink-0 mt-auto">
           <div>
-            <Logo className="h-6 brightness-0 invert mb-2" />
-            <p className="text-[12px] text-zinc-400">Reklamy i social media dla restauracji</p>
+            <Logo className="h-7 brightness-0 invert mb-2" />
+            <p className="text-[14px] text-zinc-300 font-medium">Reklamy i social media dla restauracji</p>
           </div>
           <div className="flex items-center gap-5">
             <div className="text-right">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Kod rabatowy</p>
-              <div className="bg-white text-[#0a0a0a] px-4 py-2 rounded-lg">
-                <p className="text-[18px] font-black tracking-wider">EUROGASTRO26</p>
+              <p className="text-[12px] text-zinc-400 uppercase tracking-wider font-bold mb-1">Kod rabatowy</p>
+              <div className="bg-white text-black px-4 py-2 rounded-lg">
+                <p className="text-[20px] font-black tracking-wider">EUROGASTRO26</p>
               </div>
-              <p className="text-green-400 text-[11px] font-semibold mt-1">🎁 Miesiąc za darmo</p>
+              <p className="text-green-400 text-[13px] font-bold mt-1">Miesiąc za darmo!</p>
             </div>
             {qrCode && (
-              <div className="bg-white p-1.5 rounded-lg">
-                <img src={qrCode} alt="QR" className="w-16 h-16" />
+              <div className="bg-white p-2 rounded-lg">
+                <img src={qrCode} alt="QR" className="w-18 h-18" style={{ width: '72px', height: '72px' }} />
               </div>
             )}
           </div>
@@ -283,8 +283,8 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
 
         {/* === PAGE FOOTER === */}
         <div className="mt-3 pt-2 flex items-center justify-between flex-shrink-0">
-          <span className="text-[10px] text-zinc-400">Raport wygenerowany przez mysite.ai</span>
-          <span className="text-[10px] text-zinc-400">www.mysite.ai • {today}</span>
+          <span className="text-[12px] text-zinc-600 font-medium">Raport wygenerowany przez mysite.ai</span>
+          <span className="text-[12px] text-zinc-600 font-medium">www.mysite.ai • {today}</span>
         </div>
       </div>
     </div>
