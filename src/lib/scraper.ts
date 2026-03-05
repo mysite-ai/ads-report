@@ -30,6 +30,8 @@ export interface ScrapedPageData {
   postsPerWeek: number;
   about: string;
   profileImage: string;
+  engagementRate: number | null;
+  avgReactions: number | null;
   error?: string;
 }
 
@@ -119,13 +121,18 @@ export async function scrapeFacebookPage(pageUrl: string): Promise<ScrapedPageDa
       return { name, followers, likes, category, profileImage, about };
     });
 
-    // Now get posts to check activity
+    // Now get posts to check activity and engagement
     const postsUrl = `https://www.facebook.com/${pageId}`;
     await page.goto(postsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 2000));
+    
+    // Scroll to load more posts
+    await page.evaluate(() => window.scrollBy(0, 1500));
+    await new Promise(r => setTimeout(r, 1500));
 
     const postsData = await page.evaluate(() => {
       const posts: string[] = [];
+      const reactions: number[] = [];
       
       // Look for post timestamps
       const timeElements = document.querySelectorAll('a[href*="/posts/"] span, abbr[data-utime], span[id*="jsc"]');
@@ -137,7 +144,58 @@ export async function scrapeFacebookPage(pageUrl: string): Promise<ScrapedPageDa
         }
       });
 
-      return { postDates: posts.slice(0, 5) };
+      // Look for reaction counts on posts
+      const allText = document.body.innerText;
+      
+      // Match patterns like "123", "1,2 tys.", "1.2K", "123 osób", etc.
+      const reactionPatterns = [
+        /(\d+[,\.]?\d*)\s*tys\.?/gi,  // Polish thousands
+        /(\d+[,\.]?\d*)\s*k\b/gi,      // K notation
+        /(\d+)\s*(osób|osoby|people|reakcj)/gi,  // People/reactions
+        /(\d+)\s*(polubie|like|reaction)/gi
+      ];
+      
+      // Find reaction counts near post areas
+      const postAreas = document.querySelectorAll('[data-ad-preview], [role="article"], div[class*="x1yztbdb"]');
+      postAreas.forEach(area => {
+        const areaText = area.textContent || '';
+        
+        // Look for numbers that could be reaction counts
+        for (const pattern of reactionPatterns) {
+          const matches = areaText.matchAll(pattern);
+          for (const match of matches) {
+            let num = parseFloat(match[1].replace(',', '.'));
+            // Convert thousands
+            if (match[0].toLowerCase().includes('tys') || match[0].toLowerCase().includes('k')) {
+              num *= 1000;
+            }
+            if (num > 0 && num < 1000000 && reactions.length < 10) {
+              reactions.push(Math.round(num));
+            }
+          }
+        }
+      });
+      
+      // Fallback: look for standalone numbers that look like engagement
+      if (reactions.length === 0) {
+        const standaloneMatches = allText.match(/\b(\d{1,3}(?:[,\.]\d)?)\s*(?:tys|k)\b/gi);
+        if (standaloneMatches) {
+          standaloneMatches.slice(0, 5).forEach(match => {
+            const num = parseFloat(match.replace(/[^\d,\.]/g, '').replace(',', '.'));
+            if (num > 0) reactions.push(Math.round(num * 1000));
+          });
+        }
+        
+        const smallMatches = allText.match(/\b(\d{2,4})\s*(?:osób|reakcj|polubie)/gi);
+        if (smallMatches) {
+          smallMatches.slice(0, 5).forEach(match => {
+            const num = parseInt(match.replace(/\D/g, ''));
+            if (num > 10 && num < 100000) reactions.push(num);
+          });
+        }
+      }
+
+      return { postDates: posts.slice(0, 5), reactions: reactions.slice(0, 10) };
     });
 
     // Parse last post date
@@ -167,18 +225,30 @@ export async function scrapeFacebookPage(pageUrl: string): Promise<ScrapedPageDa
       }
     }
 
+    // Calculate engagement rate
+    let engagementRate: number | null = null;
+    let avgReactions: number | null = null;
+    const followers = data.followers || data.likes || 0;
+    
+    if (postsData.reactions.length > 0 && followers > 0) {
+      avgReactions = Math.round(postsData.reactions.reduce((a, b) => a + b, 0) / postsData.reactions.length);
+      engagementRate = parseFloat(((avgReactions / followers) * 100).toFixed(2));
+    }
+
     await page.close();
 
     return {
       name: data.name || pageId,
-      followers: data.followers || data.likes || 0,
+      followers,
       likes: data.likes || 0,
       category: data.category,
       lastPostDate,
       daysSinceLastPost,
       postsPerWeek: daysSinceLastPost !== null && daysSinceLastPost <= 7 ? Math.round(7 / (daysSinceLastPost || 1)) : 0,
       about: data.about,
-      profileImage: data.profileImage
+      profileImage: data.profileImage,
+      engagementRate,
+      avgReactions
     };
 
   } catch (error) {
@@ -193,6 +263,8 @@ export async function scrapeFacebookPage(pageUrl: string): Promise<ScrapedPageDa
       postsPerWeek: 0,
       about: '',
       profileImage: '',
+      engagementRate: null,
+      avgReactions: null,
       error: `Nie udało się pobrać danych: ${error instanceof Error ? error.message : 'Nieznany błąd'}`
     };
   }

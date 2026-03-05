@@ -20,6 +20,11 @@ interface ReportData {
     postsPerWeek: number;
     activityScore: number;
   };
+  engagement: {
+    engagementRate: number | null;
+    avgReactions: number | null;
+    engagementScore: number;
+  };
   ads: {
     hasActiveAds: boolean;
     adsCount: number;
@@ -37,6 +42,7 @@ interface ReportData {
     overall: number;
     activity: number;
     ads: number;
+    engagement: number;
   };
   problems: string[];
   recommendations: string[];
@@ -132,27 +138,36 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
           </div>
 
           {/* Score Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <div className="rounded-xl bg-zinc-50 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Aktywność</p>
-                <p className="text-[22px] font-bold text-zinc-900">{data.score.activity}<span className="text-[12px] text-zinc-400">/10</span></p>
+          <div className="grid grid-cols-4 gap-2.5 mb-5">
+            <div className="rounded-xl bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Aktywność</p>
+                <p className="text-[20px] font-bold text-zinc-900">{data.score.activity}<span className="text-[11px] text-zinc-400">/10</span></p>
               </div>
-              <p className="text-[11px] text-zinc-500 leading-snug">Ocena regularności publikacji i zaangażowania na profilu</p>
+              <p className="text-[10px] text-zinc-500 leading-snug">Regularność publikacji</p>
             </div>
-            <div className="rounded-xl bg-zinc-50 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Reklamy</p>
-                <p className="text-[22px] font-bold text-zinc-900">{data.score.ads}<span className="text-[12px] text-zinc-400">/10</span></p>
+            <div className="rounded-xl bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Engagement</p>
+                <p className="text-[20px] font-bold text-zinc-900">{data.score.engagement}<span className="text-[11px] text-zinc-400">/10</span></p>
               </div>
-              <p className="text-[11px] text-zinc-500 leading-snug">Ocena obecności w płatnych kampaniach Meta Ads</p>
+              <p className="text-[10px] text-zinc-500 leading-snug">
+                {data.engagement.engagementRate !== null ? `${data.engagement.engagementRate}% eng. rate` : 'Zaangażowanie'}
+              </p>
             </div>
-            <div className={`rounded-xl p-4 ${data.ads.hasActiveAds ? 'bg-green-50' : 'bg-red-50'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Reklamy aktywne</p>
-                <p className={`text-[22px] font-bold ${data.ads.hasActiveAds ? 'text-green-600' : 'text-red-600'}`}>{data.ads.adsCount}</p>
+            <div className="rounded-xl bg-zinc-50 p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Reklamy</p>
+                <p className="text-[20px] font-bold text-zinc-900">{data.score.ads}<span className="text-[11px] text-zinc-400">/10</span></p>
               </div>
-              <p className="text-[11px] text-zinc-500 leading-snug">{data.ads.hasActiveAds ? 'Znalezione w Meta Ad Library' : 'Brak reklam = brak widoczności'}</p>
+              <p className="text-[10px] text-zinc-500 leading-snug">Kampanie Meta Ads</p>
+            </div>
+            <div className={`rounded-xl p-3 ${data.ads.hasActiveAds ? 'bg-green-50' : 'bg-red-50'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Aktywne</p>
+                <p className={`text-[20px] font-bold ${data.ads.hasActiveAds ? 'text-green-600' : 'text-red-600'}`}>{data.ads.adsCount}</p>
+              </div>
+              <p className="text-[10px] text-zinc-500 leading-snug">{data.ads.hasActiveAds ? 'Reklamy znalezione' : 'Brak widoczności'}</p>
             </div>
           </div>
 
@@ -165,6 +180,12 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
                 <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
                   <span className="text-[12px] text-zinc-500">Obserwujących</span>
                   <span className="text-[12px] font-semibold text-zinc-800">{data.page.followers > 0 ? data.page.followers.toLocaleString('pl-PL') : 'Brak danych'}</span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
+                  <span className="text-[12px] text-zinc-500">Engagement rate</span>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${data.score.engagement >= 6 ? 'bg-green-100 text-green-700' : data.score.engagement >= 4 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                    {data.engagement.engagementRate !== null ? `${data.engagement.engagementRate}%` : 'Brak danych'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-1.5 border-b border-zinc-100">
                   <span className="text-[12px] text-zinc-500">Regularność postów</span>

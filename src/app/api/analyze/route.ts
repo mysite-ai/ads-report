@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
     // Calculate scores
     const activityScore = calculateActivityScore(pageData);
     const adsScore = calculateAdsScore(adsData);
-    const overallScore = Math.round((activityScore + adsScore) / 2);
+    const engagementScore = calculateEngagementScore(pageData.engagementRate);
+    const overallScore = Math.round((activityScore + adsScore + engagementScore) / 3);
 
     // Generate problems and recommendations
     const { problems, recommendations } = generateInsights(pageData, adsData);
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest) {
           postsPerWeek: pageData.postsPerWeek,
           activityScore
         },
+        engagement: {
+          engagementRate: pageData.engagementRate,
+          avgReactions: pageData.avgReactions,
+          engagementScore
+        },
         ads: {
           hasActiveAds: adsData.hasActiveAds,
           adsCount: adsData.adsCount,
@@ -60,7 +66,8 @@ export async function POST(request: NextRequest) {
         score: {
           overall: overallScore,
           activity: activityScore,
-          ads: adsScore
+          ads: adsScore,
+          engagement: engagementScore
         },
         problems,
         recommendations,
@@ -128,6 +135,19 @@ function calculateAdsScore(adsData: { hasActiveAds: boolean; adsCount: number })
   return score;
 }
 
+function calculateEngagementScore(engagementRate: number | null): number {
+  if (engagementRate === null) return 5; // Neutral if we couldn't measure
+  
+  // Restaurant pages typically have 1-5% engagement rate
+  // >5% = excellent, 2-5% = good, 1-2% = average, <1% = low
+  if (engagementRate >= 5) return 10;
+  if (engagementRate >= 3) return 8;
+  if (engagementRate >= 2) return 7;
+  if (engagementRate >= 1) return 5;
+  if (engagementRate >= 0.5) return 4;
+  return 2;
+}
+
 function generateInsights(pageData: any, adsData: any): { problems: string[]; recommendations: string[] } {
   const problems: string[] = [];
   const recommendations: string[] = [];
@@ -154,6 +174,16 @@ function generateInsights(pageData: any, adsData: any): { problems: string[]; re
   if (pageData.followers > 0 && pageData.followers < 1000) {
     problems.push('Mała liczba obserwujących - ograniczony zasięg organiczny');
     recommendations.push('Kampanie na zwiększenie liczby obserwujących pomogą budować społeczność');
+  }
+
+  // Engagement issues
+  if (pageData.engagementRate !== null && pageData.engagementRate !== undefined) {
+    if (pageData.engagementRate < 1) {
+      problems.push(`Niski engagement rate (${pageData.engagementRate}%) - posty nie angażują obserwujących`);
+      recommendations.push('Treści interaktywne (pytania, ankiety, konkursy) zwiększą zaangażowanie');
+    } else if (pageData.engagementRate < 2) {
+      problems.push(`Przeciętny engagement rate (${pageData.engagementRate}%) - jest potencjał do poprawy`);
+    }
   }
 
   // Ads issues
