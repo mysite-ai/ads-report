@@ -84,7 +84,7 @@ export async function searchAdLibrary(pageNameOrId: string): Promise<AdLibraryRe
     const allPlatforms = new Set<string>();
     let oldestDate: Date | null = null;
     
-    ads.forEach(ad => {
+    for (const ad of ads) {
       ad.publisher_platforms?.forEach(p => allPlatforms.add(p));
       
       if (ad.ad_delivery_start_time) {
@@ -93,7 +93,7 @@ export async function searchAdLibrary(pageNameOrId: string): Promise<AdLibraryRe
           oldestDate = adDate;
         }
       }
-    });
+    }
 
     return {
       ads,
@@ -163,7 +163,7 @@ export async function getPageAds(pageId: string): Promise<AdLibraryResponse> {
     const allPlatforms = new Set<string>();
     let oldestDate: Date | null = null;
     
-    ads.forEach(ad => {
+    for (const ad of ads) {
       ad.publisher_platforms?.forEach(p => allPlatforms.add(p));
       
       if (ad.ad_delivery_start_time) {
@@ -172,7 +172,7 @@ export async function getPageAds(pageId: string): Promise<AdLibraryResponse> {
           oldestDate = adDate;
         }
       }
-    });
+    }
 
     return {
       ads,
