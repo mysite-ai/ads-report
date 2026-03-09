@@ -292,58 +292,124 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
 }
 
 export default function Home() {
-  const [facebookUrl, setFacebookUrl] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    followers: '',
+    lastPostDays: '7',
+    hasAds: 'no',
+    adsCount: '0'
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [qrCode, setQrCode] = useState('');
-  const [progress, setProgress] = useState('');
 
   const generateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setProgress('Pobieram dane z Facebooka...');
 
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ facebookUrl })
-      });
+    const followers = parseInt(formData.followers) || 0;
+    const daysSinceLastPost = parseInt(formData.lastPostDays) || 30;
+    const hasAds = formData.hasAds === 'yes';
+    const adsCount = hasAds ? parseInt(formData.adsCount) || 1 : 0;
 
-      setProgress('Sprawdzam reklamy w Meta Ad Library...');
+    // Calculate scores
+    let activityScore = 5;
+    if (daysSinceLastPost <= 1) activityScore = 8;
+    else if (daysSinceLastPost <= 3) activityScore = 7;
+    else if (daysSinceLastPost <= 7) activityScore = 6;
+    else if (daysSinceLastPost > 30) activityScore = 2;
+    else if (daysSinceLastPost > 14) activityScore = 3;
 
-      const result = await response.json();
+    if (followers > 10000) activityScore = Math.min(10, activityScore + 1);
+    else if (followers < 500) activityScore = Math.max(1, activityScore - 1);
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Wystąpił błąd');
-      }
+    let adsScore = hasAds ? 6 : 2;
+    if (adsCount >= 5) adsScore = 9;
+    else if (adsCount >= 3) adsScore = 7;
 
-      setProgress('Generuję raport...');
+    const engagementScore = 5; // neutral - nie możemy zmierzyć ręcznie
+    const overallScore = Math.round((activityScore + adsScore + engagementScore) / 3);
 
-      setReportData(result.data);
+    // Generate problems and recommendations
+    const problems: string[] = [];
+    const recommendations: string[] = [];
 
-      const qr = await QRCode.toDataURL('https://mysite.ai?ref=eurogastro26', {
-        width: 150,
-        margin: 0,
-        color: { dark: '#000000', light: '#ffffff' }
-      });
-      setQrCode(qr);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
-    } finally {
-      setLoading(false);
-      setProgress('');
+    if (daysSinceLastPost > 14) {
+      problems.push(`Ostatni post ${daysSinceLastPost} dni temu - klienci mogą myśleć że restauracja jest zamknięta`);
+      recommendations.push('Regularne posty (min. 2-3x w tygodniu) budują zaufanie');
+    } else if (daysSinceLastPost > 7) {
+      problems.push('Posty rzadziej niż raz w tygodniu - algorytm obniża zasięgi');
     }
+
+    if (followers < 1000) {
+      problems.push('Mała liczba obserwujących - ograniczony zasięg organiczny');
+      recommendations.push('Kampanie na zwiększenie obserwujących pomogą budować społeczność');
+    }
+
+    if (!hasAds) {
+      problems.push('Brak aktywnych reklam - restauracja niewidoczna dla nowych klientów');
+      recommendations.push('Kampanie reklamowe zwiększą liczbę zamówień i rezerwacji');
+      recommendations.push('Konkurencja prawdopodobnie już prowadzi płatne kampanie');
+    }
+
+    if (recommendations.length < 3) {
+      recommendations.push('Profesjonalne zdjęcia jedzenia zwiększają zaangażowanie');
+      recommendations.push('Stories i Reels mają największe zasięgi organiczne');
+    }
+
+    const data: ReportData = {
+      page: {
+        name: formData.name,
+        followers,
+        likes: followers,
+        category: 'Restauracja',
+        profileImage: '',
+        about: ''
+      },
+      activity: {
+        lastPostDate: daysSinceLastPost <= 1 ? 'Dzisiaj' : `${daysSinceLastPost} dni temu`,
+        daysSinceLastPost,
+        postsPerWeek: daysSinceLastPost <= 7 ? Math.round(7 / daysSinceLastPost) : 0,
+        activityScore
+      },
+      engagement: {
+        engagementRate: null,
+        avgReactions: null,
+        engagementScore
+      },
+      ads: {
+        hasActiveAds: hasAds,
+        adsCount,
+        ads: [],
+        adsScore
+      },
+      score: {
+        overall: overallScore,
+        activity: activityScore,
+        ads: adsScore,
+        engagement: engagementScore
+      },
+      problems,
+      recommendations,
+      generatedAt: new Date().toISOString()
+    };
+
+    setReportData(data);
+
+    const qr = await QRCode.toDataURL('https://mysite.ai?ref=eurogastro26', {
+      width: 150,
+      margin: 0,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+    setQrCode(qr);
+    setLoading(false);
   };
 
   const handlePrint = () => window.print();
   
   const resetForm = () => {
     setReportData(null);
-    setFacebookUrl('');
+    setFormData({ name: '', followers: '', lastPostDays: '7', hasAds: 'no', adsCount: '0' });
     setQrCode('');
   };
 
@@ -369,56 +435,117 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <Logo className="h-8 mx-auto mb-4" />
+        <div className="text-center mb-6">
+          <Logo className="h-8 mx-auto mb-3" />
           <p className="text-neutral-500 text-sm">Raport Social Media dla restauracji</p>
           <div className="inline-block mt-2 px-3 py-1 bg-neutral-900 text-white text-xs font-medium rounded-full">
             Eurogastro 2026
           </div>
         </div>
 
-        <form onSubmit={generateReport} className="space-y-5">
+        <form onSubmit={generateReport} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">
-              Strona Facebook restauracji
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Nazwa restauracji
             </label>
             <input
               type="text"
-              value={facebookUrl}
-              onChange={(e) => setFacebookUrl(e.target.value)}
-              placeholder="np. facebook.com/restauracja"
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition text-sm"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              placeholder="np. Pizzeria Roma"
+              className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition text-sm"
               required
             />
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm">
-              {error}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Obserwujących na FB
+            </label>
+            <input
+              type="number"
+              value={formData.followers}
+              onChange={(e) => setFormData({...formData, followers: e.target.value})}
+              placeholder="np. 1500"
+              className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition text-sm"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Ostatni post
+            </label>
+            <select
+              value={formData.lastPostDays}
+              onChange={(e) => setFormData({...formData, lastPostDays: e.target.value})}
+              className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition text-sm"
+            >
+              <option value="1">Dziś / wczoraj</option>
+              <option value="3">2-3 dni temu</option>
+              <option value="7">Tydzień temu</option>
+              <option value="14">2 tygodnie temu</option>
+              <option value="30">Miesiąc temu</option>
+              <option value="60">Ponad miesiąc temu</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Aktywne reklamy Meta?
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="hasAds"
+                  value="no"
+                  checked={formData.hasAds === 'no'}
+                  onChange={(e) => setFormData({...formData, hasAds: e.target.value, adsCount: '0'})}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Nie</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="hasAds"
+                  value="yes"
+                  checked={formData.hasAds === 'yes'}
+                  onChange={(e) => setFormData({...formData, hasAds: e.target.value, adsCount: '1'})}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Tak</span>
+              </label>
+            </div>
+          </div>
+
+          {formData.hasAds === 'yes' && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Ile reklam?
+              </label>
+              <input
+                type="number"
+                value={formData.adsCount}
+                onChange={(e) => setFormData({...formData, adsCount: e.target.value})}
+                min="1"
+                className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition text-sm"
+              />
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-neutral-900 text-white py-3.5 rounded-xl font-medium hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition disabled:opacity-50 mt-2"
           >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span className="text-sm">{progress || 'Analizuję...'}</span>
-              </>
-            ) : (
-              <span>Generuj raport</span>
-            )}
+            {loading ? 'Generuję...' : 'Generuj raport'}
           </button>
         </form>
 
-        <p className="text-center text-neutral-400 text-xs mt-6">
-          Automatyczna analiza profilu i reklam • ~30 sekund
+        <p className="text-center text-neutral-400 text-xs mt-4">
+          Sprawdź reklamy na: <a href="https://www.facebook.com/ads/library" target="_blank" className="underline">fb.com/ads/library</a>
         </p>
       </div>
     </div>
