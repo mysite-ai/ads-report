@@ -3,7 +3,7 @@ import chromium from '@sparticuz/chromium-min';
 
 let browserInstance: Browser | null = null;
 
-const CHROMIUM_URL = 'https://github.com/nicholasnm/chromium-binary/releases/download/v134.0.0-1/chromium-v134.0.0-pack.tar';
+const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar';
 
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance) {
