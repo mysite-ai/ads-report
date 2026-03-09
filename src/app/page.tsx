@@ -250,8 +250,8 @@ function PrintableReport({ data, qrCode }: { data: ReportData; qrCode: string })
             <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-700 font-bold mb-1.5">REKOMENDACJE</p>
             <div className="space-y-1">
               {data.recommendations.slice(0, 3).map((rec, i) => (
-                <div key={i} className="flex items-start gap-1.5 p-2 bg-green-100 rounded border-l-3 border-green-500">
-                  <span className="text-green-700 text-[12px] font-black flex-shrink-0">→</span>
+                <div key={i} className="flex items-start gap-1.5 p-2 bg-yellow-100 rounded border-l-3 border-yellow-500">
+                  <span className="text-yellow-700 text-[12px] font-black flex-shrink-0">→</span>
                   <p className="text-[12px] text-zinc-800 leading-snug font-medium">{rec}</p>
                 </div>
               ))}
