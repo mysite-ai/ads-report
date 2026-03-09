@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { scrapeFacebookPage, scrapeAdLibrary } from '@/lib/scraper';
+import { getFacebookProfile, getFacebookPosts, getCompanyAds, searchAdLibrary } from '@/lib/scrapecreators';
 
-export const maxDuration = 60; // Allow up to 60 seconds for scraping
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,53 +15,97 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract search term for Ad Library
-    const searchTerm = extractSearchTerm(facebookUrl);
+    // Get profile data
+    const profileData = await getFacebookProfile(facebookUrl);
+    
+    if (profileData.error) {
+      return NextResponse.json(
+        { error: profileData.error },
+        { status: 400 }
+      );
+    }
 
-    // Scrape data in parallel
-    const [pageData, adsData] = await Promise.all([
-      scrapeFacebookPage(facebookUrl),
-      scrapeAdLibrary(searchTerm)
-    ]);
+    // Get posts to check last activity
+    const postsData = await getFacebookPosts(facebookUrl);
+    
+    // Calculate days since last post
+    let daysSinceLastPost: number | null = null;
+    let lastPostDate: string | null = null;
+    
+    if (postsData.posts && postsData.posts.length > 0) {
+      const lastPost = postsData.posts[0];
+      if (lastPost.timestamp) {
+        const postDate = new Date(lastPost.timestamp);
+        const now = new Date();
+        daysSinceLastPost = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysSinceLastPost === 0) lastPostDate = 'Dzisiaj';
+        else if (daysSinceLastPost === 1) lastPostDate = 'Wczoraj';
+        else lastPostDate = `${daysSinceLastPost} dni temu`;
+      }
+    }
+
+    // Check ads - first check if profile has ads info, then search ad library
+    let adsData: { hasActiveAds: boolean; adsCount: number; ads: any[]; error?: string } = { hasActiveAds: false, adsCount: 0, ads: [] };
+    
+    // Check from profile adLibrary status
+    const hasAdsFromProfile = profileData.adLibrary?.adStatus?.includes('running ads');
+    
+    if (profileData.adLibrary?.pageId) {
+      adsData = await getCompanyAds(profileData.adLibrary.pageId);
+    } else {
+      // Fallback to search
+      const searchTerm = profileData.name || extractSearchTerm(facebookUrl);
+      adsData = await searchAdLibrary(searchTerm);
+    }
+
+    // If profile says running ads but we didn't find any, trust profile
+    if (hasAdsFromProfile && !adsData.hasActiveAds) {
+      adsData.hasActiveAds = true;
+      adsData.adsCount = 1;
+    }
 
     // Calculate scores
-    const activityScore = calculateActivityScore(pageData);
-    const adsScore = calculateAdsScore(adsData);
-    const engagementScore = calculateEngagementScore(pageData.engagementRate);
+    const activityScore = calculateActivityScore(daysSinceLastPost, profileData.followerCount);
+    const adsScore = calculateAdsScore(adsData.hasActiveAds, adsData.adsCount);
+    const engagementScore = 5; // Neutral - can't measure without more API calls
     const overallScore = Math.round((activityScore + adsScore + engagementScore) / 3);
 
-    // Generate problems and recommendations
-    const { problems, recommendations } = generateInsights(pageData, adsData);
+    // Generate insights
+    const { problems, recommendations } = generateInsights(
+      daysSinceLastPost,
+      profileData.followerCount,
+      adsData.hasActiveAds,
+      adsData.adsCount
+    );
 
     return NextResponse.json({
       success: true,
       data: {
         page: {
-          name: pageData.name,
-          followers: pageData.followers,
-          likes: pageData.likes,
-          category: pageData.category,
-          profileImage: pageData.profileImage,
-          about: pageData.about,
-          error: pageData.error
+          name: profileData.name,
+          followers: profileData.followerCount,
+          likes: profileData.likeCount,
+          category: profileData.category,
+          profileImage: profileData.profilePicLarge,
+          about: profileData.address
         },
         activity: {
-          lastPostDate: pageData.lastPostDate,
-          daysSinceLastPost: pageData.daysSinceLastPost,
-          postsPerWeek: pageData.postsPerWeek,
+          lastPostDate,
+          daysSinceLastPost,
+          postsPerWeek: daysSinceLastPost !== null && daysSinceLastPost <= 7 ? Math.round(7 / (daysSinceLastPost || 1)) : 0,
           activityScore
         },
         engagement: {
-          engagementRate: pageData.engagementRate,
-          avgReactions: pageData.avgReactions,
+          engagementRate: null,
+          avgReactions: null,
           engagementScore
         },
         ads: {
           hasActiveAds: adsData.hasActiveAds,
           adsCount: adsData.adsCount,
           ads: adsData.ads,
-          adsScore,
-          error: adsData.error
+          adsScore
         },
         score: {
           overall: overallScore,
@@ -85,122 +129,80 @@ export async function POST(request: NextRequest) {
 }
 
 function extractSearchTerm(url: string): string {
-  if (!url.includes('facebook.com') && !url.includes('fb.com')) {
-    return url;
-  }
-  
-  const match = url.match(/facebook\.com\/([^\/\?]+)/i) || url.match(/fb\.com\/([^\/\?]+)/i);
+  const match = url.match(/facebook\.com\/([^\/\?]+)/i);
   if (match && match[1]) {
-    const id = match[1];
-    if (!['pages', 'profile.php', 'sharer', 'share', 'login'].includes(id)) {
-      return id.replace(/[._-]/g, ' ');
-    }
+    return match[1].replace(/[._-]/g, ' ');
   }
-  
   return url;
 }
 
-function calculateActivityScore(pageData: { daysSinceLastPost: number | null; followers: number; postsPerWeek: number }): number {
+function calculateActivityScore(daysSinceLastPost: number | null, followers: number): number {
   let score = 5;
 
-  if (pageData.daysSinceLastPost !== null) {
-    if (pageData.daysSinceLastPost <= 1) score += 3;
-    else if (pageData.daysSinceLastPost <= 3) score += 2;
-    else if (pageData.daysSinceLastPost <= 7) score += 1;
-    else if (pageData.daysSinceLastPost > 30) score -= 3;
-    else if (pageData.daysSinceLastPost > 14) score -= 2;
-    else if (pageData.daysSinceLastPost > 7) score -= 1;
+  if (daysSinceLastPost !== null) {
+    if (daysSinceLastPost <= 1) score += 3;
+    else if (daysSinceLastPost <= 3) score += 2;
+    else if (daysSinceLastPost <= 7) score += 1;
+    else if (daysSinceLastPost > 30) score -= 3;
+    else if (daysSinceLastPost > 14) score -= 2;
+    else if (daysSinceLastPost > 7) score -= 1;
   } else {
-    score -= 2; // Can't determine activity
+    score -= 1;
   }
 
-  if (pageData.followers > 10000) score += 1;
-  else if (pageData.followers < 500) score -= 1;
-
-  if (pageData.postsPerWeek >= 5) score += 1;
-  else if (pageData.postsPerWeek <= 1) score -= 1;
+  if (followers > 10000) score += 1;
+  else if (followers < 500) score -= 1;
 
   return Math.max(1, Math.min(10, score));
 }
 
-function calculateAdsScore(adsData: { hasActiveAds: boolean; adsCount: number }): number {
-  if (!adsData.hasActiveAds) return 2;
+function calculateAdsScore(hasActiveAds: boolean, adsCount: number): number {
+  if (!hasActiveAds) return 2;
   
-  let score = 5;
-  if (adsData.adsCount >= 10) score = 9;
-  else if (adsData.adsCount >= 5) score = 8;
-  else if (adsData.adsCount >= 3) score = 7;
-  else if (adsData.adsCount >= 1) score = 5;
-
-  return score;
+  if (adsCount >= 10) return 9;
+  if (adsCount >= 5) return 8;
+  if (adsCount >= 3) return 7;
+  return 5;
 }
 
-function calculateEngagementScore(engagementRate: number | null): number {
-  if (engagementRate === null) return 5; // Neutral if we couldn't measure
-  
-  // Restaurant pages typically have 1-5% engagement rate
-  // >5% = excellent, 2-5% = good, 1-2% = average, <1% = low
-  if (engagementRate >= 5) return 10;
-  if (engagementRate >= 3) return 8;
-  if (engagementRate >= 2) return 7;
-  if (engagementRate >= 1) return 5;
-  if (engagementRate >= 0.5) return 4;
-  return 2;
-}
-
-function generateInsights(pageData: any, adsData: any): { problems: string[]; recommendations: string[] } {
+function generateInsights(
+  daysSinceLastPost: number | null,
+  followers: number,
+  hasAds: boolean,
+  adsCount: number
+): { problems: string[]; recommendations: string[] } {
   const problems: string[] = [];
   const recommendations: string[] = [];
 
-  // Page data issues
-  if (pageData.error) {
-    problems.push('Nie udało się w pełni pobrać danych strony FB');
-  }
-
-  // Activity issues
-  if (pageData.daysSinceLastPost !== null) {
-    if (pageData.daysSinceLastPost > 30) {
-      problems.push(`Ostatni post ${pageData.daysSinceLastPost} dni temu - klienci mogą myśleć że restauracja jest zamknięta`);
-      recommendations.push('Regularne posty (min. 2-3x w tygodniu) budują zaufanie i przypominają o restauracji');
-    } else if (pageData.daysSinceLastPost > 14) {
-      problems.push(`Ostatni post ${pageData.daysSinceLastPost} dni temu - zbyt rzadka aktywność`);
+  if (daysSinceLastPost !== null) {
+    if (daysSinceLastPost > 30) {
+      problems.push(`Ostatni post ${daysSinceLastPost} dni temu - klienci mogą myśleć że restauracja jest zamknięta`);
+      recommendations.push('Regularne posty (min. 2-3x w tygodniu) budują zaufanie');
+    } else if (daysSinceLastPost > 14) {
+      problems.push(`Ostatni post ${daysSinceLastPost} dni temu - zbyt rzadka aktywność`);
       recommendations.push('Warto publikować posty przynajmniej 2-3 razy w tygodniu');
-    } else if (pageData.daysSinceLastPost > 7) {
+    } else if (daysSinceLastPost > 7) {
       problems.push('Posty rzadziej niż raz w tygodniu - algorytm obniża zasięgi');
     }
   }
 
-  // Followers issues
-  if (pageData.followers > 0 && pageData.followers < 1000) {
+  if (followers > 0 && followers < 1000) {
     problems.push('Mała liczba obserwujących - ograniczony zasięg organiczny');
-    recommendations.push('Kampanie na zwiększenie liczby obserwujących pomogą budować społeczność');
+    recommendations.push('Kampanie na zwiększenie obserwujących pomogą budować społeczność');
   }
 
-  // Engagement issues
-  if (pageData.engagementRate !== null && pageData.engagementRate !== undefined) {
-    if (pageData.engagementRate < 1) {
-      problems.push(`Niski engagement rate (${pageData.engagementRate}%) - posty nie angażują obserwujących`);
-      recommendations.push('Treści interaktywne (pytania, ankiety, konkursy) zwiększą zaangażowanie');
-    } else if (pageData.engagementRate < 2) {
-      problems.push(`Przeciętny engagement rate (${pageData.engagementRate}%) - jest potencjał do poprawy`);
-    }
-  }
-
-  // Ads issues
-  if (!adsData.hasActiveAds) {
-    problems.push('Brak aktywnych reklam - restauracja jest niewidoczna dla nowych klientów szukających miejsca do jedzenia');
-    recommendations.push('Kampanie reklamowe na Facebooku i Instagramie zwiększą liczbę zamówień i rezerwacji');
-    recommendations.push('Konkurencja prawdopodobnie już prowadzi płatne kampanie i przejmuje klientów');
-  } else if (adsData.adsCount < 3) {
+  if (!hasAds) {
+    problems.push('Brak aktywnych reklam - restauracja niewidoczna dla nowych klientów');
+    recommendations.push('Kampanie reklamowe zwiększą liczbę zamówień i rezerwacji');
+    recommendations.push('Konkurencja prawdopodobnie już prowadzi płatne kampanie');
+  } else if (adsCount < 3) {
     problems.push('Mała liczba aktywnych reklam - ograniczony zasięg kampanii');
-    recommendations.push('Więcej wariantów reklam pozwala testować różne przekazy i grupy docelowe');
+    recommendations.push('Więcej wariantów reklam pozwala testować różne przekazy');
   }
 
-  // General recommendations
-  if (recommendations.length < 4) {
-    recommendations.push('Profesjonalne zdjęcia jedzenia znacząco zwiększają zaangażowanie');
-    recommendations.push('Stories i Reels mają obecnie największe zasięgi organiczne');
-    recommendations.push('Odpowiadanie na komentarze i wiadomości buduje relacje z klientami');
+  if (recommendations.length < 3) {
+    recommendations.push('Profesjonalne zdjęcia jedzenia zwiększają zaangażowanie');
+    recommendations.push('Stories i Reels mają największe zasięgi organiczne');
   }
 
   return { problems, recommendations };
