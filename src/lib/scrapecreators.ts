@@ -43,7 +43,7 @@ export async function getFacebookProfile(url: string): Promise<FacebookProfileDa
 
     const data = await response.json();
 
-    if (!data.success) {
+    if (!data.success || data.account_status === 'private') {
       return {
         name: '',
         followerCount: 0,
@@ -54,7 +54,7 @@ export async function getFacebookProfile(url: string): Promise<FacebookProfileDa
         website: '',
         phone: '',
         address: '',
-        error: data.error || 'Failed to fetch profile'
+        error: data.message || data.error || 'Profil jest prywatny lub niedostępny'
       };
     }
 
