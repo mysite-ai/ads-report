@@ -1,17 +1,20 @@
 import puppeteerCore, { Browser } from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import chromium from '@sparticuz/chromium-min';
 
 let browserInstance: Browser | null = null;
+
+const CHROMIUM_URL = 'https://github.com/nicholasnm/chromium-binary/releases/download/v134.0.0-1/chromium-v134.0.0-pack.tar';
 
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance) {
     const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
     
     if (isVercel) {
+      const executablePath = await chromium.executablePath(CHROMIUM_URL);
       browserInstance = await puppeteerCore.launch({
         args: chromium.args,
         defaultViewport: { width: 1920, height: 1080 },
-        executablePath: await chromium.executablePath(),
+        executablePath,
         headless: true,
       });
     } else {
